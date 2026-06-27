@@ -1,7 +1,7 @@
-# Security Group para o ALB (Público)
+# Security Group para o ALB (Público) - Requisicoes externas > ALB
 resource "aws_security_group" "alb_sg" {
   name        = "${var.project_name}-alb-sg"
-  description = "Security Group para o ALB (Publico)" # <-- Sem acento
+  description = "Security Group para o ALB (Publico)" 
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -28,14 +28,14 @@ resource "aws_security_group_rule" "alb_egress" {
   security_group_id = aws_security_group.alb_sg.id
 }
 
-# Security Group para o cluster ECS (Privado)
+# Security Group para o cluster ECS (Privado) - Requisicoes ALB > ECS Tasks
 resource "aws_security_group" "ecs_tasks_sg" {
   name        = "${var.project_name}-ecs-tasks-sg"
-  description = "Permite trafego vindo do ALB" # <-- Sem acento
+  description = "Permite trafego vindo do ALB" 
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "Permite trafego vindo do ALB" # <-- Sem acento
+    description     = "Permite trafego vindo do ALB" 
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
