@@ -1,0 +1,27 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
+    zabbix = {
+      source  = "claranet/zabbix"
+      version = ">= 0.4.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      project     = var.project_name
+      managed_by  = "Terraform"
+      Terraform   = "true"
+      Environment = terraform.workspace
+    }
+  }
+}

@@ -1,0 +1,9 @@
+# .pre-commit-config.yaml
+
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.97.0 # Versão estável do repositório do Anton
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_trivy
