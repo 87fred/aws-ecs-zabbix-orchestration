@@ -3,3 +3,5 @@
 *.tfstate.*
 crash.log
 *.tfvars
+# Ignorar o plano binário gerado pelo script de deploy
+tfplan

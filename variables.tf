@@ -24,3 +24,29 @@ variable "public_subnet_b_cidr" {
   type        = string
   description = "Bloco de IP (CIDR) da Subnet Publica B"
 }
+
+variable "db_parameter_group_name" {
+  description = "Nome do grupo de parametros do RDS"
+  type        = string
+  default     = "default.postgres15"
+}
+
+variable "rds_db_name" {
+  description = "Nome do banco de dados do RDS - Zabbix"
+  type        = string
+}
+
+variable "rds_username" {
+  description = "Nome do usuario do banco de dados do RDS - Zabbix"
+  type        = string
+}
+
+variable "private_subnet_a_cidr" {
+  type        = string
+  description = "Bloco de IP (CIDR) da Subnet Privada A"
+}
+
+variable "private_subnet_b_cidr" {
+  type        = string
+  description = "Bloco de IP (CIDR) da Subnet Privada B"
+}
