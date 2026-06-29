@@ -100,8 +100,21 @@ resource "aws_ecs_task_definition" "zabbix_task" {
         {
           name  = "ZBX_SERVER_NAME"
           value = "${var.project_name}-server"
+        },
+        {
+        name  = "POSTGRES_USER"
+          value = local.db_credentials.username # Puxa direto do Secrets Manager via local do rds.tf
+        },
+        {
+          name  = "POSTGRES_PASSWORD"
+          value = local.db_credentials.password # Puxa direto do Secrets Manager via local do rds.tf
+        },
+        {
+          name  = "POSTGRES_DB"
+          value = var.rds_db_name # Puxa da variável definida no seu dev.tfvars
         }
       ]
+      
 
       logConfiguration = {
         logDriver = "awslogs"
