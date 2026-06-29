@@ -49,6 +49,27 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
+
+resource "aws_iam_role_policy" "ecs_secrets_policy" {
+  name = "${var.project_name}-ecs-secrets-policy"
+  role = aws_iam_role.ecs_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          data.aws_secretsmanager_secret.bootstrap_secret.arn
+        ]
+      }
+    ]
+  })
+}
+
 #Grupo de logs no CLoudwatch
 #Cria o repositório de logs para o container do Zabbix
 resource "aws_cloudwatch_log_group" "zabbix_log_group" {
@@ -94,7 +115,7 @@ resource "aws_ecs_task_definition" "zabbix_task" {
       
       environment = [
         {
-          name  = "DB_SERVER_HOST"
+name  = "DB_SERVER_HOST"
           value = aws_db_instance.zabbix_rds.address
         },
         {
@@ -102,16 +123,19 @@ resource "aws_ecs_task_definition" "zabbix_task" {
           value = "${var.project_name}-server"
         },
         {
-        name  = "POSTGRES_USER"
-          value = local.db_credentials.username # Puxa direto do Secrets Manager via local do rds.tf
-        },
-        {
-          name  = "POSTGRES_PASSWORD"
-          value = local.db_credentials.password # Puxa direto do Secrets Manager via local do rds.tf
-        },
-        {
           name  = "POSTGRES_DB"
-          value = var.rds_db_name # Puxa da variável definida no seu dev.tfvars
+          value = var.rds_db_name
+        }
+      ],
+
+      secrets = [
+        {
+          name      = "POSTGRES_USER"
+          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::"
+        },
+        {
+          name      = "POSTGRES_PASSWORD"
+          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::"
         }
       ]
       
