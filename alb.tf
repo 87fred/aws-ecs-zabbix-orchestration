@@ -20,14 +20,14 @@ resource "aws_lb_target_group" "zabbix" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/index.php"
     port                = "traffic-port" # Dinâmico: vai testar automaticamente a porta 8080 acima
     protocol            = "HTTP"
     interval            = 30
     timeout             = 5
     healthy_threshold   = 3
     unhealthy_threshold = 3
-    matcher             = "200-399"
+    matcher             = "200-302"
   }
 
   tags = {

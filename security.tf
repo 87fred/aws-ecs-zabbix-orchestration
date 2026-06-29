@@ -84,6 +84,16 @@ resource "aws_security_group_rule" "ecs_egress" {
   security_group_id = aws_security_group.ecs_tasks_sg.id
 }
 
+resource "aws_security_group_rule" "ecs_ingress_zabbix_server" {
+  description              = "Permite trafego na porta nativa do Zabbix Server"
+  type                     = "ingress"
+  from_port                = 10051
+  to_port                  = 10051
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecs_tasks_sg.id # O SG aponta para si mesmo
+  security_group_id        = aws_security_group.ecs_tasks_sg.id
+}
+
 # =============================================================
 # 3. SECURITY GROUP DO BANCO DE DADOS RDS 
 # =============================================================

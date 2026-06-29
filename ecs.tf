@@ -142,7 +142,7 @@ resource "aws_ecs_task_definition" "zabbix_task" {
         { name = "DB_SERVER_PORT", value = tostring(aws_db_instance.zabbix_rds.port) },
         { name = "POSTGRES_DB",    value = var.rds_db_name },
         { name = "ZBX_SERVER_HOST", value = "127.0.0.1" },
-        { name = "PHP_TZ",          value = var.app_timezone }
+        { name = "PHP_TZ", value = var.app_timezone }
       ]
 
       secrets = [
@@ -161,3 +161,83 @@ resource "aws_ecs_task_definition" "zabbix_task" {
     }
   ]) # Fecha o jsonencode e a lista de containers
 } # Fecha o recurso aws_ecs_task_definition
+
+# Task Definition do Grafana
+resource "aws_ecs_task_definition" "grafana_task" {
+  family                   = "${var.project_name}-grafana"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "grafana"
+      image     = "grafana/grafana:latest"
+      essential = true
+      
+      portMappings = [
+        {
+          containerPort = 3000
+          hostPort      = 3000
+          protocol      = "tcp"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.grafana_log_group.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "grafana"
+        }
+      }
+    }
+  ])
+}
+
+# ECS Service do Grafana
+resource "aws_ecs_service" "grafana_service" {
+  name            = "${var.project_name}-grafana-service"
+  cluster         = aws_ecs_cluster.ecs-cluster-zabbix.id
+  task_definition = aws_ecs_task_definition.grafana_task.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    security_groups  = [aws_security_group.ecs_tasks_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.grafana.arn
+    container_name   = "grafana"
+    container_port   = 3000
+  }
+
+  depends_on = [aws_lb_listener.grafana_http]
+}
+
+resource "aws_ecs_service" "zabbix_service" {
+  name            = "${var.project_name}-zabbix-service"
+  cluster         = aws_ecs_cluster.ecs-cluster-zabbix.id
+  task_definition = aws_ecs_task_definition.zabbix_task.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id] # Rodando nas subnets públicas com IGW
+    security_groups  = [aws_security_group.ecs_tasks_sg.id]
+    assign_public_ip = true # Essencial no Fargate sem NAT Gateway para baixar as imagens oficiais do Docker Hub
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.zabbix.arn
+    container_name   = "zabbix-web" # Aponta estritamente para o container que expõe a porta 8080
+    container_port   = 8080
+  }
+
+  depends_on = [aws_lb_listener.zabbix_http] # Evita race condition antes do ALB estar pronto
+}
