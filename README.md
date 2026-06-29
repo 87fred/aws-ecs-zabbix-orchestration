@@ -1,53 +1,95 @@
-# 🚀 AWS ECS Zabbix Orchestration
+# 🚀 AWS ECS Zabbix & Grafana Orchestration
 
-Projeto de **Infrastructure as Code (IaC)** utilizando **Terraform** para provisionar uma infraestrutura segura, escalável e modular na AWS, servindo como base para uma futura implantação do **Zabbix** utilizando **Amazon ECS**.
+Projeto de **Infrastructure as Code (IaC)** utilizando **Terraform** para provisionar uma infraestrutura altamente segura, escalável, modular e baseada em **Amazon ECS Fargate**, orquestrando os serviços do **Zabbix** e **Grafana** na AWS.
 
-O projeto está sendo desenvolvido de forma incremental, documentando toda a evolução da arquitetura e aplicando boas práticas de **Cloud Computing**, **DevSecOps** e **Infrastructure as Code**.
+O projeto foi desenvolvido aplicando conceitos avançados de **Cloud Architecture**, **DevSecOps**, segurança de credenciais e boas práticas de infraestrutura em produção.
 
 ---
 
 # 🎯 Objetivo
 
-Construir uma infraestrutura AWS utilizando Terraform seguindo boas práticas de:
+Construir e demonstrar uma infraestrutura AWS robusta utilizando Terraform, seguindo as melhores práticas de mercado:
 
-* Infrastructure as Code (IaC)
-* Cloud Architecture
-* DevSecOps
-* Segurança
-* Escalabilidade
-* Alta disponibilidade
-
-Toda a infraestrutura é provisionada através do Terraform, garantindo versionamento, reprodutibilidade e facilidade de manutenção.
+* **Infrastructure as Code (IaC):** Versionamento, reprodutibilidade e facilidade de manutenção.
+* **DevSecOps & Segurança:** Injeção de credenciais de forma mascarada, criptografia e isolamento de rede.
+* **Serverless & Escalabilidade:** Orquestração de containers sem gerenciamento de instâncias EC2.
+* **Alta Disponibilidade:** Distribuição dos recursos em múltiplas Availability Zones (AZs).
 
 ---
 
 # 📦 Recursos Implementados
 
-## 🌐 Infraestrutura
+## 🌐 Rede e Segurança (`network.tf` / `security.tf`)
 
 * Amazon VPC
+* Subnets Públicas (AZ A e AZ B)
+* Subnets Privadas (AZ A e AZ B)
 * Internet Gateway
-* Public Subnets
-* Private Subnets
 * Route Tables
-* Security Groups
+* Security Groups restritivos
+
+### Características
+
+* Segmentação completa da infraestrutura.
+* Banco de dados isolado em subnets privadas.
+* Application Load Balancer exposto apenas para os serviços necessários.
+* Comunicação permitida apenas entre ALB → ECS → RDS.
 
 ---
 
-## 🗄 Banco de Dados
+## 🗄️ Camada de Dados (`rds.tf`)
 
-* Amazon RDS PostgreSQL
-* DB Subnet Group
+* Amazon RDS PostgreSQL 15.7
 * AWS Secrets Manager
 
+### Características
+
+* Banco PostgreSQL executando em subnets privadas.
+* Credenciais armazenadas de forma segura no Secrets Manager.
+* Nenhuma senha armazenada no código Terraform.
+
 ---
 
-## ⚙️ Organização
+## ⚙️ Orquestração de Containers (`ecs.tf`)
 
-* Terraform Providers
-* Variáveis reutilizáveis
-* Ambientes utilizando `.tfvars`
-* Resource Tagging
+* Amazon ECS Cluster
+* ECS Task Definition
+* ECS Service
+* Amazon ECR
+* AWS Fargate
+* FARGATE_SPOT
+* Amazon CloudWatch Logs
+
+### Características
+
+* Containers executados em infraestrutura serverless.
+* Task Definitions independentes para Zabbix e Grafana.
+* Utilização do bloco `secrets` do ECS para ocultar credenciais.
+* Logs centralizados no CloudWatch.
+
+---
+
+## 🌍 Balanceamento de Carga (`alb.tf`)
+
+* Application Load Balancer (ALB)
+* Listeners
+* Target Groups
+
+### Portas
+
+| Serviço | Porta |
+| ------- | ----: |
+| Zabbix  |    80 |
+| Grafana |  3000 |
+
+---
+
+## 📊 Outputs (`outputs.tf`)
+
+Ao término do provisionamento são exibidas automaticamente:
+
+* URL do Zabbix
+* URL do Grafana
 
 ---
 
@@ -55,48 +97,90 @@ Toda a infraestrutura é provisionada através do Terraform, garantindo versiona
 
 ```text
 .
-├── providers.tf
-├── variables.tf
-├── network.tf
-├── security.tf
-├── rds.tf
+├── alb.tf
 ├── dev.tfvars
-└── README.md
+├── ecs.tf
+├── network.tf
+├── outputs.tf
+├── providers.tf
+├── rds.tf
+├── security.tf
+└── variables.tf
 ```
 
-| Arquivo        | Responsabilidade                                                            |
-| -------------- | --------------------------------------------------------------------------- |
-| `providers.tf` | Configuração dos providers e tags padrão                                    |
-| `variables.tf` | Declaração das variáveis do projeto                                         |
-| `network.tf`   | Provisionamento da infraestrutura de rede                                   |
-| `security.tf`  | Configuração dos Security Groups                                            |
-| `rds.tf`       | Provisionamento do Amazon RDS e leitura das credenciais via Secrets Manager |
-| `dev.tfvars`   | Valores das variáveis para o ambiente de desenvolvimento                    |
+## Arquivos
+
+| Arquivo        | Responsabilidade                                             |
+| -------------- | ------------------------------------------------------------ |
+| `alb.tf`       | Application Load Balancer, Listeners e Target Groups         |
+| `dev.tfvars`   | Variáveis do ambiente de desenvolvimento                     |
+| `ecs.tf`       | ECS Cluster, Task Definitions, ECS Services, CloudWatch Logs |
+| `network.tf`   | VPC, Subnets, Route Tables e Internet Gateway                |
+| `outputs.tf`   | URLs públicas após o deploy                                  |
+| `providers.tf` | Providers AWS e configuração de Tags                         |
+| `rds.tf`       | Amazon RDS PostgreSQL e Secrets Manager                      |
+| `security.tf`  | Security Groups                                              |
+| `variables.tf` | Declaração das variáveis                                     |
 
 ---
 
-# 🔒 Segurança
+# 🔒 Segurança (Padrão Produção)
 
-A arquitetura foi desenvolvida seguindo o princípio de **Least Privilege**, implementando:
+A arquitetura foi desenvolvida seguindo os princípios de **Least Privilege** e **Zero Hardcoded Values**.
 
-* Banco de dados privado
-* Security Groups específicos para cada camada
-* Credenciais armazenadas no AWS Secrets Manager
-* Separação entre Subnets Públicas e Privadas
-* Resource Tagging para padronização dos recursos
+## ✅ Mascaramento de Credenciais
+
+Ao invés de utilizar variáveis em `environment`, as credenciais são carregadas através do bloco:
+
+```hcl
+secrets {
+  name      = "POSTGRES_PASSWORD"
+  valueFrom = aws_secretsmanager_secret.rds.arn
+}
+```
+
+Dessa forma:
+
+* nenhuma senha aparece no Terraform;
+* nenhuma senha aparece no Console da AWS;
+* as credenciais são injetadas diretamente na memória do container.
+
+---
+
+## ✅ Banco de Dados Privado
+
+O Amazon RDS:
+
+* não possui IP público;
+* aceita conexões apenas do Security Group do ECS;
+* permanece inacessível pela Internet.
+
+---
+
+## ✅ Resource Tagging
+
+Todos os recursos recebem tags automaticamente utilizando o Terraform Workspace.
+
+Exemplo:
+
+```text
+Environment = dev
+ManagedBy   = Terraform
+Project     = aws-ecs-zabbix-orchestration
+```
 
 ---
 
 # ⚙️ Pré-requisitos
 
-Antes de executar o projeto, é necessário possuir:
+Antes da execução é necessário possuir:
 
 * Terraform >= 1.5
-* AWS CLI configurado
-* Conta AWS
-* Permissões para criação dos recursos
+* AWS CLI configurada
+* Credenciais AWS válidas
+* Um Secret previamente criado no AWS Secrets Manager
 
-Também é necessário criar previamente um Secret no AWS Secrets Manager com o nome:
+Nome do Secret:
 
 ```text
 aws-ecs-zabbix-orchestration-rds-secret-v1
@@ -106,46 +190,68 @@ Formato esperado:
 
 ```json
 {
-  "username": "admin",
-  "password": "password"
+  "username": "seu_usuario",
+  "password": "sua_senha_segura"
 }
 ```
 
 ---
 
-# 🚀 Como executar
+# 🚀 Como Executar
 
-Inicializar o projeto:
+## Inicializar o Terraform
 
 ```bash
 terraform init
 ```
 
-Validar a configuração:
+---
+
+## Criar ou selecionar o Workspace
+
+```bash
+terraform workspace new dev || terraform workspace select dev
+```
+
+---
+
+## Validar a configuração
 
 ```bash
 terraform validate
 ```
 
-Formatar os arquivos:
+---
 
-```bash
-terraform fmt
-```
-
-Gerar o plano de execução:
+## Visualizar o plano
 
 ```bash
 terraform plan -var-file="dev.tfvars"
 ```
 
-Provisionar a infraestrutura:
+---
+
+## Provisionar a infraestrutura
 
 ```bash
 terraform apply -var-file="dev.tfvars"
 ```
 
-Remover a infraestrutura:
+Ao final serão exibidos:
+
+```text
+Outputs:
+
+grafana_url =
+http://aws-ecs-zabbix-orchestration-alb-xxxxx.us-east-1.elb.amazonaws.com:3000
+
+zabbix_url =
+http://aws-ecs-zabbix-orchestration-alb-xxxxx.us-east-1.elb.amazonaws.com
+```
+
+---
+
+## Destruir toda a infraestrutura
 
 ```bash
 terraform destroy -var-file="dev.tfvars"
@@ -153,46 +259,65 @@ terraform destroy -var-file="dev.tfvars"
 
 ---
 
-# 📚 Boas Práticas Aplicadas
+# 🏗️ Arquitetura
+
+```text
+               Internet
+                    │
+                    │
+          Application Load Balancer
+                    │
+          ┌─────────┴─────────┐
+          │                   │
+      ECS Service        ECS Service
+       (Zabbix)          (Grafana)
+          │                   │
+          └─────────┬─────────┘
+                    │
+            Amazon ECS Cluster
+               (AWS Fargate)
+                    │
+          AWS Secrets Manager
+                    │
+             Amazon RDS PostgreSQL
+             (Subnets Privadas)
+```
+
+---
+
+# 🛠️ Tecnologias Utilizadas
+
+* Terraform
+* AWS
+* Amazon ECS
+* AWS Fargate
+* Amazon ECR
+* Amazon RDS PostgreSQL
+* Amazon VPC
+* Application Load Balancer
+* AWS Secrets Manager
+* Amazon CloudWatch
+* IAM
+* Security Groups
+* Zabbix
+* Grafana
+
+---
+
+# 📚 Conceitos Demonstrados
 
 * Infrastructure as Code (IaC)
-* Cloud Native
+* Cloud Architecture
 * DevSecOps
 * Least Privilege
+* Secrets Management
+* Container Orchestration
+* Alta Disponibilidade
+* Observabilidade
+* Infraestrutura Serverless
+* Terraform Workspaces
 * Resource Tagging
-* Organização por responsabilidade
-* Reutilização de variáveis
-* Ambientes separados por `.tfvars`
-* Gerenciamento seguro de credenciais
-
----
-
-# 🚀 Próximas Evoluções
-
-O projeto continuará evoluindo com a implementação dos seguintes serviços:
-
-## Containers
-
-* Amazon Elastic Container Registry (ECR)
-* Amazon ECS Cluster
-* Amazon ECS Task Definition
-* Amazon ECS Service
-
-## Balanceamento de Carga
-
-* Application Load Balancer (ALB)
-
-## Observabilidade
-
-* Amazon CloudWatch
-
----
-
-# 🎯 Objetivo do Projeto
-
-Este projeto faz parte do meu portfólio profissional e tem como objetivo demonstrar a construção de uma infraestrutura AWS moderna utilizando Terraform.
-
-A proposta é evoluir continuamente a arquitetura, incorporando novos serviços e boas práticas utilizadas em ambientes de produção, documentando cada etapa da implementação.
+* Networking AWS
 
 ---
 
@@ -200,6 +325,5 @@ A proposta é evoluir continuamente a arquitetura, incorporando novos serviços 
 
 **Frederico Almeida**
 
-Cloud Engineer | DevOps | AWS | Terraform | Linux
+**Network & Cloud Analyst | DevOps | AWS | Terraform | Linux**
 
-Projeto desenvolvido para fins de estudo, evolução técnica e composição de portfólio profissional.
