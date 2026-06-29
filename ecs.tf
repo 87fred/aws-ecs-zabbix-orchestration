@@ -91,64 +91,28 @@ resource "aws_cloudwatch_log_group" "grafana_log_group" {
 }
 #Definicao da task do Zabbix
 resource "aws_ecs_task_definition" "zabbix_task" {
-  family                   = "${var.project_name}-zabbix" # Blueprint exclusivo do Zabbix
+  family                   = "${var.project_name}-zabbix"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn #Permissoes de execução do container
+  cpu                      = "1024"
+  memory                   = "2048"
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
   container_definitions = jsonencode([
     {
-      name      = "zabbix-web"
-      image     = "zabbix/zabbix-web-nginx-pgsql:latest" #Imagem oficial do Zabbix
+      name      = "zabbix-server"
+      image     = "zabbix/zabbix-server-pgsql:alpine-6.4-latest"
       essential = true
-
-      portMappings = [
-        {
-          containerPort = 8080 # Porta interna que o container do Zabbix escuta
-          hostPort      = 8080
-          protocol      = "tcp"
-        }
-      ]
-
-      # variaveis de ambiente para o zabbix se conectar ao banco de dados RDS (Sem vírgulas internas)
+      
       environment = [
-        {
-          name  = "DB_SERVER_HOST"
-          value = aws_db_instance.zabbix_rds.address
-        },
-        {
-          name  = "POSTGRES_HOST"
-          value = aws_db_instance.zabbix_rds.address
-        },
-        {
-          name  = "ZBX_SERVER_NAME"
-          value = "${var.project_name}-server"
-        },
-        {
-          name  = "POSTGRES_DB"
-          value = var.rds_db_name
-        }
+        { name = "DB_SERVER_HOST", value = aws_db_instance.zabbix_rds.address },
+        { name = "DB_SERVER_PORT", value = tostring(aws_db_instance.zabbix_rds.port) },
+        { name = "POSTGRES_DB",    value = var.rds_db_name }
       ]
 
       secrets = [
-        {
-          name      = "POSTGRES_USER"
-          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::"
-        },
-        {
-          name      = "POSTGRES_PASSWORD"
-          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::"
-        },
-        {
-          name      = "DB_SERVER_USER"
-          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::"
-        },
-        {
-          name      = "DB_SERVER_PASSWORD"
-          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::"
-        }
+        { name = "POSTGRES_USER",     valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::" },
+        { name = "POSTGRES_PASSWORD", valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::" }
       ]
 
       logConfiguration = {
@@ -156,13 +120,44 @@ resource "aws_ecs_task_definition" "zabbix_task" {
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.zabbix_log_group.name
           "awslogs-region"        = var.aws_region
-          "awslogs-stream-prefix" = "zabbix"
+          "awslogs-stream-prefix" = "server"
+        }
+      }
+    },
+    {
+      name      = "zabbix-web"
+      image     = "zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest"
+      essential = true
+      
+      portMappings = [
+        {
+          containerPort = 8080
+          hostPort      = 8080
+          protocol      = "tcp"
+        }
+      ]
+
+      environment = [
+        { name = "DB_SERVER_HOST", value = aws_db_instance.zabbix_rds.address },
+        { name = "DB_SERVER_PORT", value = tostring(aws_db_instance.zabbix_rds.port) },
+        { name = "POSTGRES_DB",    value = var.rds_db_name },
+        { name = "ZBX_SERVER_HOST", value = "127.0.0.1" },
+        { name = "PHP_TZ",          value = var.app_timezone }
+      ]
+
+      secrets = [
+        { name = "POSTGRES_USER",     valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::" },
+        { name = "POSTGRES_PASSWORD", valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::" }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.zabbix_log_group.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "web"
         }
       }
     }
-  ])
-
-  tags = {
-    Name = "${var.project_name}-task-zabbix"
-  }
-}
+  ]) # Fecha o jsonencode e a lista de containers
+} # Fecha o recurso aws_ecs_task_definition

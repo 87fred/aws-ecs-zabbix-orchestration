@@ -14,14 +14,14 @@ resource "aws_lb" "alb" {
 #Target Groups (Destinos nas subnets privadas)
 resource "aws_lb_target_group" "zabbix" {
   name        = "${substr(var.project_name, 0, 20)}-tg-zabbix"
-  port        = 8080
+  port        = 8080 # AJUSTADO: O ALB agora envia o tráfego para as tasks na porta 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
     path                = "/"
-    port                = "8080"
+    port                = "traffic-port" # Dinâmico: vai testar automaticamente a porta 8080 acima
     protocol            = "HTTP"
     interval            = 30
     timeout             = 5
@@ -33,7 +33,6 @@ resource "aws_lb_target_group" "zabbix" {
   tags = {
     Name = "${var.project_name}-tg-zabbix"
   }
-
 }
 
 resource "aws_lb_target_group" "grafana" {
@@ -57,14 +56,13 @@ resource "aws_lb_target_group" "grafana" {
   tags = {
     Name = "${var.project_name}-tg-grafana"
   }
-
 }
 
 #Listener (Ouvintes - apontados para o ALB (aws_alb.alb))
-#Ouvinte da porta 80 (Zabbix)
+#Ouvinte da porta 80 (Zabbix público)
 resource "aws_lb_listener" "zabbix_http" {
   load_balancer_arn = aws_lb.alb.arn
-  port              = 80
+  port              = 80 # Mantido: O mundo externo acessa o Zabbix sem precisar digitar porta na URL
   protocol          = "HTTP"
 
   default_action {
@@ -72,7 +70,8 @@ resource "aws_lb_listener" "zabbix_http" {
     target_group_arn = aws_lb_target_group.zabbix.arn
   }
 }
-#Ouvinte da porta 3000 (Grafana)
+
+#Ouvinte da porta 3000 (Grafana público)
 resource "aws_lb_listener" "grafana_http" {
   load_balancer_arn = aws_lb.alb.arn
   port              = 3000
