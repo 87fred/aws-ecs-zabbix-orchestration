@@ -97,6 +97,7 @@ resource "aws_ecs_task_definition" "zabbix_task" {
   cpu                      = "512"
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn #Permissoes de execução do container
+
   container_definitions = jsonencode([
     {
       name      = "zabbix-web"
@@ -111,11 +112,14 @@ resource "aws_ecs_task_definition" "zabbix_task" {
         }
       ]
 
-      #variaveis de ambiente para o zabbix se conectar ao banco de dados RDS 
-      
+      # variaveis de ambiente para o zabbix se conectar ao banco de dados RDS (Sem vírgulas internas)
       environment = [
         {
-name  = "DB_SERVER_HOST"
+          name  = "DB_SERVER_HOST"
+          value = aws_db_instance.zabbix_rds.address
+        },
+        {
+          name  = "POSTGRES_HOST"
           value = aws_db_instance.zabbix_rds.address
         },
         {
@@ -126,7 +130,7 @@ name  = "DB_SERVER_HOST"
           name  = "POSTGRES_DB"
           value = var.rds_db_name
         }
-      ],
+      ]
 
       secrets = [
         {
@@ -136,16 +140,23 @@ name  = "DB_SERVER_HOST"
         {
           name      = "POSTGRES_PASSWORD"
           valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::"
+        },
+        {
+          name      = "DB_SERVER_USER"
+          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::"
+        },
+        {
+          name      = "DB_SERVER_PASSWORD"
+          valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::"
         }
       ]
-      
 
       logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.zabbix_log_group.name
           "awslogs-region"        = var.aws_region
-          "awslogs-stream-prefix" = "zabbix" # CORRIGIDO: Adicionado aspas na chave
+          "awslogs-stream-prefix" = "zabbix"
         }
       }
     }
@@ -155,81 +166,3 @@ name  = "DB_SERVER_HOST"
     Name = "${var.project_name}-task-zabbix"
   }
 }
-
-#Servico do ECS para o Zabbix
-resource "aws_ecs_service" "zabbix_service" {
-  name            = "${var.project_name}-zabbix-service"
-  cluster         = aws_ecs_cluster.ecs-cluster-zabbix.id # Conecta ao cluster criado anteriormente
-  task_definition = aws_ecs_task_definition.zabbix_task.arn # Conecta a task definition do Zabbix
-  desired_count   = 1 # Mantém sempre 1 container rodando
-  launch_type     = "FARGATE" #Define o modelo Serverless
-
-  network_configuration {
-    subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id] #IDs dinâmicos das suas subnets públicas
-    security_groups = [aws_security_group.ecs_tasks_sg.id] # Grupo de segurança do ECS Tasks
-    assign_public_ip = true #PERMITE baixar as imagens do Docker Hub sem precisar de NAT Gateway
-  }
-
- 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.zabbix.arn # Conecta ao target group do Zabbix
-    container_name   = "zabbix-web" # Nome do container definido na task definition
-    container_port   = 8080 # Porta interna que o container do Zabbix escuta
-  }
-}
-
-resource "aws_ecs_task_definition" "grafana_service" {
-  family                   = "${var.project_name}-grafana"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-
-  container_definitions = jsonencode([
-    {
-      name      = "grafana"
-      image     = "grafana/grafana:latest"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 3000
-          hostPort      = 3000
-          protocol      = "tcp"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.grafana_log_group.name
-          "awslogs-region"        = var.aws_region
-          "awslogs-stream-prefix" = "grafana"
-        }
-      }
-    }
-  ])
-  tags = {
-    Name = "${var.project_name}-task-grafana"
-  }
-}
-
-  #Servico do ECS para o Grafana  
-  resource "aws_ecs_service" "grafana_service" {
-    name            = "${var.project_name}-grafana-service"
-    cluster         = aws_ecs_cluster.ecs-cluster-zabbix.id # Conecta ao cluster criado anteriormente
-    task_definition = aws_ecs_task_definition.grafana_service.arn # Conecta a task definition do Grafana
-    desired_count   = 1 # Mantém sempre 1 container rodando
-    launch_type     = "FARGATE" #Define o modelo Serverless
-
-  network_configuration {
-    subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id] #IDs dinâmicos das suas subnets públicas
-    security_groups = [aws_security_group.ecs_tasks_sg.id] # Grupo de segurança do ECS Tasks
-    assign_public_ip = true #PERMITE baixar as imagens do Docker Hub sem precisar de NAT Gateway
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.grafana.arn # Conecta ao target group do Grafana
-    container_name   = "grafana" # Nome do container definido na task definition
-    container_port   = 3000 # Porta interna que o container do Grafana escuta
-  }
-}  
