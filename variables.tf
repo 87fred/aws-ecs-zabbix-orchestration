@@ -50,3 +50,8 @@ variable "private_subnet_b_cidr" {
   type        = string
   description = "Bloco de IP (CIDR) da Subnet Privada B"
 }
+variable "app_timezone" {
+  type        = string
+  description = "Timezone utilizado nas aplicacoes (Zabbix/Grafana)"
+  default     = "America/Sao_Paulo"
+}

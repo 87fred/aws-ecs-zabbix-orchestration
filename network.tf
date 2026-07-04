@@ -78,6 +78,33 @@ resource "aws_route_table" "rt_public" {
   }
 }
 
+resource "aws_route_table" "rt_private_a" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "${var.project_name}-rt-private-a"
+  }
+}
+
+# Tabela de Rotas dedicada para a AZ-B Privada
+resource "aws_route_table" "rt_private_b" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "${var.project_name}-rt-private-b"
+  }
+}
+
+# Associação da Subnet Privada A
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.rt_private_a.id
+}
+
+# Associação da Subnet Privada B
+resource "aws_route_table_association" "private_b" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.rt_private_b.id
+}
+
 #Associação da Subnet A com a tabela de Roteamento
 resource "aws_route_table_association" "public_a" {
   subnet_id      = aws_subnet.public_a.id
