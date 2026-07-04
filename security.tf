@@ -117,3 +117,24 @@ resource "aws_security_group_rule" "rds_ingress" {
   source_security_group_id = aws_security_group.ecs_tasks_sg.id
   security_group_id        = aws_security_group.rds_sg.id
 }
+resource "aws_security_group" "vpc_endpoint_sg" {
+  name = "${var.project_name}-vpc-endpoints-sg"
+  description = "SG paa as interfaces do PrivateLink (ECR/LOGS)"
+  vpc_id = aws_vpc.main.id
+
+tags = {
+  Name = "${var.project_name}-vpc-endpoints-sg"
+ }
+}
+#Regra isolada - permite entrada HTTPS vinda apenas das Tasks do ECS
+resource "aws_security_group_rule" "vpc_endpoints_ingress" {
+  description = "permite conexao das ECS Tasks para os servicos AWS"
+  type = "ingress"
+  from_port = 443
+  to_port = 443
+  protocol = "tcp"
+  source_security_group_id = aws_security_group.ecs_tasks_sg.id
+  security_group_id = aws_security_group.vpc_endpoint_sg.id
+}
+
+

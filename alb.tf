@@ -14,7 +14,7 @@ resource "aws_lb" "alb" {
 #Target Groups (Destinos nas subnets privadas)
 resource "aws_lb_target_group" "zabbix" {
   name        = "${substr(var.project_name, 0, 20)}-tg-zabbix"
-  port        = 8080 # AJUSTADO: O ALB agora envia o tráfego para as tasks na porta 8080
+  port        = 8080
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"

@@ -1,329 +1,184 @@
 # 🚀 AWS ECS Zabbix & Grafana Orchestration
 
-Projeto de **Infrastructure as Code (IaC)** utilizando **Terraform** para provisionar uma infraestrutura altamente segura, escalável, modular e baseada em **Amazon ECS Fargate**, orquestrando os serviços do **Zabbix** e **Grafana** na AWS.
+### 📌 Visão Geral
+Infraestrutura *production-like* de observabilidade na AWS utilizando **Terraform (IaC)** para provisionar um ambiente altamente escalável, tolerante a falhas e seguro contendo:
 
-O projeto foi desenvolvido aplicando conceitos avançados de **Cloud Architecture**, **DevSecOps**, segurança de credenciais e boas práticas de infraestrutura em produção.
+* **Zabbix** (Monitoramento robusto e coleta de dados)
+* **Grafana** (Visualização rica e dashboards analíticos)
+* **AWS ECS Fargate** (*Serverless containers orchestration*)
+* **Amazon RDS PostgreSQL** (Persistência de dados gerenciada)
+* **AWS Secrets Manager** (Gestão e injeção segura de credenciais)
 
----
-
-# 🎯 Objetivo
-
-Construir e demonstrar uma infraestrutura AWS robusta utilizando Terraform, seguindo as melhores práticas de mercado:
-
-* **Infrastructure as Code (IaC):** Versionamento, reprodutibilidade e facilidade de manutenção.
-* **DevSecOps & Segurança:** Injeção de credenciais de forma mascarada, criptografia e isolamento de rede.
-* **Serverless & Escalabilidade:** Orquestração de containers sem gerenciamento de instâncias EC2.
-* **Alta Disponibilidade:** Distribuição dos recursos em múltiplas Availability Zones (AZs).
+O projeto simula com precisão uma arquitetura real de produção voltada para engenharia de observabilidade moderna baseada em containers.
 
 ---
 
-# 📦 Recursos Implementados
+### 🎯 Objetivo
+Projetar e demonstrar uma infraestrutura cloud completa com foco em pilares de excelência técnica:
 
-## 🌐 Rede e Segurança (`network.tf` / `security.tf`)
-
-* Amazon VPC
-* Subnets Públicas (AZ A e AZ B)
-* Subnets Privadas (AZ A e AZ B)
-* Internet Gateway
-* Route Tables
-* Security Groups restritivos
-
-### Características
-
-* Segmentação completa da infraestrutura.
-* Banco de dados isolado em subnets privadas.
-* Application Load Balancer exposto apenas para os serviços necessários.
-* Comunicação permitida apenas entre ALB → ECS → RDS.
+* **Infraestrutura como Código (IaC):** Automação total, reprodutibilidade e versionamento de ambiente.
+* **Segurança por padrão (DevSecOps):** Mitigação de vulnerabilidades e exposição zero de dados sensíveis.
+* **Arquitetura Multi-AZ:** Resiliência e alta disponibilidade distribuída em diferentes zonas.
+* **Escalabilidade Serverless:** Computação elástica com ECS Fargate sem gerenciar instâncias de servidores.
+* **Observabilidade Centralizada:** Coleta de logs agregados nativamente.
 
 ---
 
-## 🗄️ Camada de Dados (`rds.tf`)
+### 🧠 Decisões Arquiteturais
 
-* Amazon RDS PostgreSQL 15.7
-* AWS Secrets Manager
-
-### Características
-
-* Banco PostgreSQL executando em subnets privadas.
-* Credenciais armazenadas de forma segura no Secrets Manager.
-* Nenhuma senha armazenada no código Terraform.
+* **ECS Fargate:** Elimina a complexidade de gestão, patches e escalabilidade de instâncias EC2 tradicionais.
+* **RDS em Subnets Privadas:** Isolamento de rede absoluto da camada de banco de dados, sem qualquer exposição à internet pública.
+* **AWS PrivateLink (VPC Endpoints):** Comunicação do ECS para downloads de imagens de repositórios e envio de logs de forma 100% interna na rede AWS, dispensando custos com NAT Gateways.
+* **Secrets Manager via IAM Data Fetching:** Zero credenciais codificadas (*hardcoded*) no código, injetadas de forma efêmera na memória volátil dos containers.
+* **ALB Inteligente:** Entrada pública única e centralizada chaveando tráfego por portas e regras dinâmicas de destino (*Target Groups*).
+* **IAM Least Privilege:** Aplicação rígida do princípio de menor privilégio para regras de execução das tarefas.
 
 ---
 
-## ⚙️ Orquestração de Containers (`ecs.tf`)
-
-* Amazon ECS Cluster
-* ECS Task Definition
-* ECS Service
-* Amazon ECR
-* AWS Fargate
-* FARGATE_SPOT
-* Amazon CloudWatch Logs
-
-### Características
-
-* Containers executados em infraestrutura serverless.
-* Task Definitions independentes para Zabbix e Grafana.
-* Utilização do bloco `secrets` do ECS para ocultar credenciais.
-* Logs centralizados no CloudWatch.
-
----
-
-## 🌍 Balanceamento de Carga (`alb.tf`)
-
-* Application Load Balancer (ALB)
-* Listeners
-* Target Groups
-
-### Portas
-
-| Serviço | Porta |
-| ------- | ----: |
-| Zabbix  |    80 |
-| Grafana |  3000 |
-
----
-
-## 📊 Outputs (`outputs.tf`)
-
-Ao término do provisionamento são exibidas automaticamente:
-
-* URL do Zabbix
-* URL do Grafana
-
----
-
-# 📂 Estrutura do Projeto
+### 🏗️ Arquitetura Lógica do Fluxo
 
 ```text
+               [ Internet Pública ]
+                        │
+                Portas 80 / 3000
+                        ▼
+            Application Load Balancer
+           (Subnets Públicas AZ A/B)
+                        │
+      ┌─────────────────┴─────────────────┐
+Porta 8080 (Zabbix Web)            Porta 3000 (Grafana)
+      ▼                                   ▼
+ [ ECS Service ]                     [ ECS Service ]
+Task: Zabbix Server/Web               Task: Grafana
+      │                                   │
+      └─────────────────┬─────────────────┘
+                        ▼
+              [ VPC Endpoints SG ]
+            Porta 443 (PrivateLink)
+                        ▼
+         ┌──────────────┼──────────────┐
+         ▼              ▼              ▼
+     [ECR API]      [ECR DKR]    [CloudWatch]
+
+🔐 Segurança (DevSecOps)
+
+    Banco de dados inacessível externamente e sem associação de IP público.
+
+    Injeção dinâmica de segredos no boot da Task através do parâmetro secrets do ECS.
+
+    Comunicação restrita horizontalmente através de regras de Security Groups isoladas (aws_security_group_rule).
+
+    Segregação física e lógica de redes através de subnets públicas e privadas bem definidas.
+
+⚙️ Stack Tecnológica
+
+    Terraform
+
+    AWS ECS Fargate & Fargate Spot
+
+    Amazon ECR (Elastic Container Registry)
+
+    Amazon RDS PostgreSQL 15.7
+
+    Amazon VPC & AWS PrivateLink (VPC Endpoints)
+
+    Application Load Balancer (ALB)
+
+    AWS Secrets Manager
+
+    Amazon CloudWatch Logs
+
+    AWS IAM (Identity and Access Management)
+
+    Zabbix Application Suite
+
+    Grafana Dashboards
+
+📦 Recursos Provisionados
+
+    1x AWS VPC com DNS Hostnames ativado.
+
+    4x Subnets (2 públicas para o ALB e 2 privadas para computação/banco) distribuídas in Multi-AZ.
+
+    3x VPC Endpoints de Interface (ECR API, ECR DKR e Logs) para segurança interna.
+
+    1x Amazon ECS Cluster com painel Container Insights ativo no CloudWatch.
+
+    2x ECS Task Definitions segregadas (Zabbix Server/Web em Pod multicontainer e Grafana autônomo).
+
+    2x ECS Services gerenciando ciclo de vida e checagem de saúde contínua das tarefas.
+
+    1x Application Load Balancer público munido de Listeners nas portas 80 e 3000.
+
+    2x Target Groups do tipo ip orquestrando o roteamento privado.
+
+    1x Instância de Banco de Dados RDS PostgreSQL acoplada a um DB Subnet Group privado.
+
+    4x Security Groups customizados atuando como firewalls estritos de rede.
+
+📁 Estrutura do Projeto
+Plaintext
+
 .
-├── alb.tf
-├── dev.tfvars
-├── ecs.tf
-├── network.tf
-├── outputs.tf
-├── providers.tf
-├── rds.tf
-├── security.tf
-└── variables.tf
-```
+├── alb.tf         # Configuração do Load Balancer, Listeners e Target Groups
+├── ecs.tf         # Definição do Cluster, Task Definitions, Services e Logs
+├── network.tf     # Construção da VPC, Subnets, Tabelas de Roteamento e Endpoints
+├── rds.tf         # Provisionamento do PostgreSQL e integração com Secrets Manager
+├── security.tf    # Definição fina de Security Groups e regras de Ingress/Egress
+├── outputs.tf     # Exposição estruturada das URLs públicas pós-deploy
+├── providers.tf   # Definições de provedores e injeção automática de tags padrão
+├── variables.tf   # Declaração e tipagem rigorosa das variáveis de entrada
+└── dev.tfvars     # Atribuição de valores específicos para o ambiente de Desenvolvimento
 
-## Arquivos
+🚀 Como Executar
+1. Inicializar o ambiente do Terraform
+Bash
 
-| Arquivo        | Responsabilidade                                             |
-| -------------- | ------------------------------------------------------------ |
-| `alb.tf`       | Application Load Balancer, Listeners e Target Groups         |
-| `dev.tfvars`   | Variáveis do ambiente de desenvolvimento                     |
-| `ecs.tf`       | ECS Cluster, Task Definitions, ECS Services, CloudWatch Logs |
-| `network.tf`   | VPC, Subnets, Route Tables e Internet Gateway                |
-| `outputs.tf`   | URLs públicas após o deploy                                  |
-| `providers.tf` | Providers AWS e configuração de Tags                         |
-| `rds.tf`       | Amazon RDS PostgreSQL e Secrets Manager                      |
-| `security.tf`  | Security Groups                                              |
-| `variables.tf` | Declaração das variáveis                                     |
-
----
-
-# 🔒 Segurança (Padrão Produção)
-
-A arquitetura foi desenvolvida seguindo os princípios de **Least Privilege** e **Zero Hardcoded Values**.
-
-## ✅ Mascaramento de Credenciais
-
-Ao invés de utilizar variáveis em `environment`, as credenciais são carregadas através do bloco:
-
-```hcl
-secrets {
-  name      = "POSTGRES_PASSWORD"
-  valueFrom = aws_secretsmanager_secret.rds.arn
-}
-```
-
-Dessa forma:
-
-* nenhuma senha aparece no Terraform;
-* nenhuma senha aparece no Console da AWS;
-* as credenciais são injetadas diretamente na memória do container.
-
----
-
-## ✅ Banco de Dados Privado
-
-O Amazon RDS:
-
-* não possui IP público;
-* aceita conexões apenas do Security Group do ECS;
-* permanece inacessível pela Internet.
-
----
-
-## ✅ Resource Tagging
-
-Todos os recursos recebem tags automaticamente utilizando o Terraform Workspace.
-
-Exemplo:
-
-```text
-Environment = dev
-ManagedBy   = Terraform
-Project     = aws-ecs-zabbix-orchestration
-```
-
----
-
-# ⚙️ Pré-requisitos
-
-Antes da execução é necessário possuir:
-
-* Terraform >= 1.5
-* AWS CLI configurada
-* Credenciais AWS válidas
-* Um Secret previamente criado no AWS Secrets Manager
-
-Nome do Secret:
-
-```text
-aws-ecs-zabbix-orchestration-rds-secret-v1
-```
-
-Formato esperado:
-
-```json
-{
-  "username": "seu_usuario",
-  "password": "sua_senha_segura"
-}
-```
-
----
-
-# 🚀 Como Executar
-
-## Inicializar o Terraform
-
-```bash
 terraform init
-```
 
----
+2. Criar ou selecionar o Workspace dedicado
+Bash
 
-## Criar ou selecionar o Workspace
+terraform workspace select dev || terraform workspace new dev
 
-```bash
-terraform workspace new dev || terraform workspace select dev
-```
+3. Validar estaticamente a sintaxe dos arquivos
+Bash
 
----
-
-## Validar a configuração
-
-```bash
 terraform validate
-```
 
----
+4. Visualizar o plano de execução e alterações planejadas
+Bash
 
-## Visualizar o plano
-
-```bash
 terraform plan -var-file="dev.tfvars"
-```
 
----
+5. Executar o deploy automatizado na AWS
+Bash
 
-## Provisionar a infraestrutura
-
-```bash
 terraform apply -var-file="dev.tfvars"
-```
 
-Ao final serão exibidos:
+6. Destruir o ambiente (Limpeza pós-uso)
+Bash
 
-```text
-Outputs:
-
-grafana_url =
-http://aws-ecs-zabbix-orchestration-alb-xxxxx.us-east-1.elb.amazonaws.com:3000
-
-zabbix_url =
-http://aws-ecs-zabbix-orchestration-alb-xxxxx.us-east-1.elb.amazonaws.com
-```
-
----
-
-## Destruir toda a infraestrutura
-
-```bash
 terraform destroy -var-file="dev.tfvars"
-```
 
----
+🌐 Mapeamento de Outputs e URLs
 
-# 🏗️ Arquitetura
+Ao término do terraform apply, o console exibirá de forma estruturada as seguintes rotas públicas para acesso imediato no navegador:
 
-```text
-               Internet
-                    │
-                    │
-          Application Load Balancer
-                    │
-          ┌─────────┴─────────┐
-          │                   │
-      ECS Service        ECS Service
-       (Zabbix)          (Grafana)
-          │                   │
-          └─────────┬─────────┘
-                    │
-            Amazon ECS Cluster
-               (AWS Fargate)
-                    │
-          AWS Secrets Manager
-                    │
-             Amazon RDS PostgreSQL
-             (Subnets Privadas)
-```
+    Zabbix Web interface: http://<alb-dns-name> (Porta padrão 80 HTTP)
 
----
+    Grafana Dashboards: http://<alb-dns-name>:3000 (Porta 3000 HTTP)
 
-# 🛠️ Tecnologias Utilizadas
+🔥 Destaques Técnicos
 
-* Terraform
-* AWS
-* Amazon ECS
-* AWS Fargate
-* Amazon ECR
-* Amazon RDS PostgreSQL
-* Amazon VPC
-* Application Load Balancer
-* AWS Secrets Manager
-* Amazon CloudWatch
-* IAM
-* Security Groups
-* Zabbix
-* Grafana
+    Arquitetura Resiliente Multi-AZ: Tolerância automática a falhas a nível de datacenter AWS.
 
----
+    Mapeamento de Tráfego Interno Avançado: O ALB recebe requisições na porta 80 e as encaminha de forma transparente para as Tasks na porta 8080 nativa do container Zabbix Web Nginx.
 
-# 📚 Conceitos Demonstrados
+    Estratégias de Custos Inteligentes: Uso flexível de Fargate Spot para computação otimizada em ambientes de não-produção.
 
-* Infrastructure as Code (IaC)
-* Cloud Architecture
-* DevSecOps
-* Least Privilege
-* Secrets Management
-* Container Orchestration
-* Alta Disponibilidade
-* Observabilidade
-* Infraestrutura Serverless
-* Terraform Workspaces
-* Resource Tagging
-* Networking AWS
+    Infraestrutura 100% Reprodutível: Todo o ecossistema pode ser recriado do zero em minutos com apenas um comando.
 
----
+👨‍💻 Autor
 
-# 👨‍💻 Autor
-
-**Frederico Almeida**
-
-**Network & Cloud Analyst | DevOps | AWS | Terraform | Linux**
-
+Frederico Almeida Cloud & DevOps Engineer | AWS | Terraform | Linux
