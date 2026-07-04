@@ -1,4 +1,4 @@
-# 🚀 AWS ECS Zabbix Orchestration - TESTE
+# 🚀 AWS ECS Zabbix Orchestration
 
 Projeto de **Infrastructure as Code (IaC)** utilizando **Terraform** para provisionar uma infraestrutura segura, escalável e modular na AWS, servindo como base para uma futura implantação do **Zabbix** utilizando **Amazon ECS**.
 
