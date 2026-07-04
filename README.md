@@ -181,4 +181,4 @@ Ao término do terraform apply, o console exibirá de forma estruturada as segui
 
 👨‍💻 Autor
 
-Frederico Almeida Cloud & DevOps Engineer | AWS | Terraform | Linux
+Frederico Almeida - Cloud & DevOps Engineer | AWS | Terraform | Linux
