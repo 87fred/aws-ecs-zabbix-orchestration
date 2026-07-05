@@ -3,7 +3,7 @@
 variable "aws_region" {
   type        = string
   description = "Regiao da AWS onde a infraestrutura sera provisionada"
-  default = "us-east-1"
+  default     = "us-east-1"
 }
 
 variable "project_name" {
@@ -60,13 +60,13 @@ variable "app_timezone" {
 variable "zabbix_server_image" {
   type        = string
   description = "Imagem docker para o Zabbix Server"
-  default = "ubuntu/zabbix-server-postgresql:6.4-latest"
+  default     = "ubuntu/zabbix-server-postgresql:6.4-latest"
 }
 
 variable "zabbix_web_image" {
   type        = string
   description = "Imagem docker para o Zabbix Web Interface"
-  default = "zabbix/zabbix-web-nginx-pgsql:6.4-ubuntu-latest"
+  default     = "zabbix/zabbix-web-nginx-pgsql:6.4-ubuntu-latest"
 }
 
 variable "grafana_image" {

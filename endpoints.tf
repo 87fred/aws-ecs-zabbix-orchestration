@@ -2,27 +2,27 @@
 
 #Endpoint para o ECR API - Necessario para autenticacao do ECS herdar permissoes do ECR
 resource "aws_vpc_endpoint" "ecr_api" {
-vpc_id = aws_vpc.main.id                                            # Vincula o túnel à nossa VPC principal
-service_name = "com.amazonaws.us-east-1.ecr.api"            # Endereço oficial da API do ECR na AWS
-vpc_endpoint_type = "Interface"                                 # Tipo Interface (cria placas de rede na subnet)
+  vpc_id            = aws_vpc.main.id                   # Vincula o túnel à nossa VPC principal
+  service_name      = "com.amazonaws.us-east-1.ecr.api" # Endereço oficial da API do ECR na AWS
+  vpc_endpoint_type = "Interface"                       # Tipo Interface (cria placas de rede na subnet)
 
 
-#Insere o tunel dentro das duas subnets privadas
-subnet_ids = [
+  #Insere o tunel dentro das duas subnets privadas
+  subnet_ids = [
     aws_subnet.private_a.id,
     aws_subnet.private_b.id
-]
+  ]
 
-#Protege o tunel com o SG que foi criado
-security_group_ids = [
+  #Protege o tunel com o SG que foi criado
+  security_group_ids = [
     aws_security_group.vpc_endpoint_sg.id
-]
+  ]
 
-private_dns_enabled = true
+  private_dns_enabled = true
 
-tags = {
+  tags = {
     Name = "vpce-ecr-api"
- }
+  }
 }
 
 # 2. TÚNEL PARA O ECR DKR (Para o ECS conseguir baixar as camadas das imagens Docker)

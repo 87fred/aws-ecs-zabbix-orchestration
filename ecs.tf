@@ -103,15 +103,15 @@ resource "aws_ecs_task_definition" "zabbix_task" {
       name      = "zabbix-server"
       image     = "zabbix/zabbix-server-pgsql:alpine-6.4-latest"
       essential = true
-      
+
       environment = [
         { name = "DB_SERVER_HOST", value = aws_db_instance.zabbix_rds.address },
         { name = "DB_SERVER_PORT", value = tostring(aws_db_instance.zabbix_rds.port) },
-        { name = "POSTGRES_DB",    value = var.rds_db_name }
+        { name = "POSTGRES_DB", value = var.rds_db_name }
       ]
 
       secrets = [
-        { name = "POSTGRES_USER",     valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::" },
+        { name = "POSTGRES_USER", valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::" },
         { name = "POSTGRES_PASSWORD", valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::" }
       ]
 
@@ -128,7 +128,7 @@ resource "aws_ecs_task_definition" "zabbix_task" {
       name      = "zabbix-web"
       image     = "zabbix/zabbix-web-nginx-pgsql:alpine-6.4-latest"
       essential = true
-      
+
       portMappings = [
         {
           containerPort = 8080
@@ -140,13 +140,13 @@ resource "aws_ecs_task_definition" "zabbix_task" {
       environment = [
         { name = "DB_SERVER_HOST", value = aws_db_instance.zabbix_rds.address },
         { name = "DB_SERVER_PORT", value = tostring(aws_db_instance.zabbix_rds.port) },
-        { name = "POSTGRES_DB",    value = var.rds_db_name },
+        { name = "POSTGRES_DB", value = var.rds_db_name },
         { name = "ZBX_SERVER_HOST", value = "127.0.0.1" },
         { name = "PHP_TZ", value = var.app_timezone }
       ]
 
       secrets = [
-        { name = "POSTGRES_USER",     valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::" },
+        { name = "POSTGRES_USER", valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:username::" },
         { name = "POSTGRES_PASSWORD", valueFrom = "${data.aws_secretsmanager_secret.bootstrap_secret.arn}:password::" }
       ]
 
@@ -160,7 +160,7 @@ resource "aws_ecs_task_definition" "zabbix_task" {
       }
     }
   ]) # Fecha o jsonencode e a lista de containers
-} # Fecha o recurso aws_ecs_task_definition
+}    # Fecha o recurso aws_ecs_task_definition
 
 # Task Definition do Grafana
 resource "aws_ecs_task_definition" "grafana_task" {
@@ -176,7 +176,7 @@ resource "aws_ecs_task_definition" "grafana_task" {
       name      = "grafana"
       image     = "grafana/grafana:latest"
       essential = true
-      
+
       portMappings = [
         {
           containerPort = 3000
