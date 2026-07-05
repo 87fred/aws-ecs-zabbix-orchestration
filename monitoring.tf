@@ -53,6 +53,13 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         properties = {
           title = "RDS: Saúde do Banco de Dados"
           period = 300, stat = "Average", region = var.aws_region
+          
+          # Isso cria os nomes das réguas verticais esquerda e direita
+          yAxis = {
+            left = { label = "Porcentagem (%)", min = 0, max = 100 },
+            right = { label = "Quantidade (Conexões)", min = 0 }
+          }
+
           metrics = [
             ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "${var.project_name}-rds-instance", { "label" = "CPU Banco (%)", "color" = "#d62728" }],
             ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "${var.project_name}-rds-instance", { "label" = "Conexões Ativas", "color" = "#2ca02c", "yAxis" = "right" }]

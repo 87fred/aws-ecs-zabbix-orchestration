@@ -9,5 +9,5 @@ resource "aws_sns_topic" "sns_alerts" {
 resource "aws_sns_topic_subscription" "sns_email_subscription" {
     topic_arn = aws_sns_topic.sns_alerts.arn
     protocol  = "email"
-    endpoint  = "frederico.almeidamoreira@gmail.com"
+    endpoint  = "E-mail que será notificado" # Substitua pelo seu e-mail
 }
