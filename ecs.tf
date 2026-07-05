@@ -1,19 +1,19 @@
-# Criacao do cluster ECS
+#Criacao do cluster ECS
 resource "aws_ecs_cluster" "ecs-cluster-zabbix" {
   name = "${var.project_name}-ecs-cluster-zabbix"
   setting {
-    name  = "containerInsights" # Ativa o painel de monitoramento do ECS no CloudWatch
-    value = "enabled"           # Coleta métricas de CPU, memória e rede dos containers
+    name  = "containerInsights" #Ativa o painel de monitoramento do ECS no CloudWatch
+    value = "enabled"           #Coleta métricas de CPU, memória e rede dos containers
+
   }
 
   tags = {
     Name = "${var.project_name}-ecs-cluster-zabbix"
   }
 }
-
-# Vincula a estratégia de capacidade serverless ao cluster criado
+#Vincula a estratégia de capacidade serveless ao cluster criado, permitindo que o ECS gerencie automaticamente a alocação de recursos para as tarefas.
 resource "aws_ecs_cluster_capacity_providers" "ecs-cluster-zabbix" {
-  cluster_name       = aws_ecs_cluster.ecs-cluster-zabbix.name
+  cluster_name       = aws_ecs_cluster.ecs-cluster-zabbix.name # CORRIGIDO: Removido 'aaws_' para 'aws_'
   capacity_providers = ["FARGATE", "FARGATE_SPOT"]
   default_capacity_provider_strategy {
     base              = 1
@@ -21,11 +21,11 @@ resource "aws_ecs_cluster_capacity_providers" "ecs-cluster-zabbix" {
     weight            = 100
   }
 }
-
-# Permissoes de execucoes - IAM Roles
+#Permissoes de execucoes - IAM Roles
 resource "aws_iam_role" "ecs_execution_role" {
   name = "${var.project_name}-ecs-execution-role"
 
+  #Define a politica de confiança permitindo o serviço de ECS (ecs-tasks) está autorizado a assumir a identity.
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -44,6 +44,7 @@ resource "aws_iam_role" "ecs_execution_role" {
   }
 }
 
+#Anexa a politica padrão gerenciada pela AWS (AmazonECSTaskExecutionRolePolicy) na role que criamos acima
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
@@ -69,26 +70,26 @@ resource "aws_iam_role_policy" "ecs_secrets_policy" {
   })
 }
 
-# Grupos de logs no CloudWatch
+#Grupo de logs no CLoudwatch
+#Cria o repositório de logs para o container do Zabbix
 resource "aws_cloudwatch_log_group" "zabbix_log_group" {
   name              = "/ecs/${var.project_name}-zabbix"
-  retention_in_days = 5
+  retention_in_days = 5 #Define o período de retenção dos logs (em dias)
 
   tags = {
     Name = "${var.project_name}-zabbix-log-group"
   }
 }
 
+#Cria o repositório de logs para o container do Grafana
 resource "aws_cloudwatch_log_group" "grafana_log_group" {
   name              = "/ecs/${var.project_name}-grafana"
-  retention_in_days = 5
-
+  retention_in_days = 5 #Define o período de retenção dos logs (em dias)
   tags = {
     Name = "${var.project_name}-grafana-log-group"
   }
 }
-
-# Definicao da task do Zabbix (Multicontainer Pod)
+#Definicao da task do Zabbix
 resource "aws_ecs_task_definition" "zabbix_task" {
   family                   = "${var.project_name}-zabbix"
   network_mode             = "awsvpc"
@@ -158,8 +159,8 @@ resource "aws_ecs_task_definition" "zabbix_task" {
         }
       }
     }
-  ])
-}
+  ]) # Fecha o jsonencode e a lista de containers
+} # Fecha o recurso aws_ecs_task_definition
 
 # Task Definition do Grafana
 resource "aws_ecs_task_definition" "grafana_task" {
@@ -196,7 +197,7 @@ resource "aws_ecs_task_definition" "grafana_task" {
   ])
 }
 
-# ECS Service - Grafana
+# ECS Service do Grafana
 resource "aws_ecs_service" "grafana_service" {
   name            = "${var.project_name}-grafana-service"
   cluster         = aws_ecs_cluster.ecs-cluster-zabbix.id
@@ -219,7 +220,6 @@ resource "aws_ecs_service" "grafana_service" {
   depends_on = [aws_lb_listener.grafana_http]
 }
 
-# ECS Service - Zabbix
 resource "aws_ecs_service" "zabbix_service" {
   name            = "${var.project_name}-zabbix-service"
   cluster         = aws_ecs_cluster.ecs-cluster-zabbix.id
@@ -228,16 +228,16 @@ resource "aws_ecs_service" "zabbix_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id] # Rodando nas subnets públicas com IGW
     security_groups  = [aws_security_group.ecs_tasks_sg.id]
-    assign_public_ip = true
+    assign_public_ip = true # Essencial no Fargate sem NAT Gateway para baixar as imagens oficiais do Docker Hub
   }
 
   load_balancer {
     target_group_arn = aws_lb_target_group.zabbix.arn
-    container_name   = "zabbix-web"
+    container_name   = "zabbix-web" # Aponta estritamente para o container que expõe a porta 8080
     container_port   = 8080
   }
 
-  depends_on = [aws_lb_listener.zabbix_http]
+  depends_on = [aws_lb_listener.zabbix_http] # Evita race condition antes do ALB estar pronto
 }

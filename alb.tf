@@ -1,4 +1,4 @@
-# ALB - Público
+#ALB - Público
 resource "aws_lb" "alb" {
   name               = "${var.project_name}-alb"
   internal           = false
@@ -11,7 +11,7 @@ resource "aws_lb" "alb" {
   }
 }
 
-# Target Group - Zabbix (Porta do Container: 8080)
+#Target Groups (Destinos nas subnets privadas)
 resource "aws_lb_target_group" "zabbix" {
   name        = "${substr(var.project_name, 0, 20)}-tg-zabbix"
   port        = 8080
@@ -21,7 +21,7 @@ resource "aws_lb_target_group" "zabbix" {
 
   health_check {
     path                = "/index.php"
-    port                = "traffic-port" # Testa automaticamente a porta 8080 configurada acima
+    port                = "traffic-port" # Dinâmico: vai testar automaticamente a porta 8080 acima
     protocol            = "HTTP"
     interval            = 30
     timeout             = 5
@@ -35,7 +35,6 @@ resource "aws_lb_target_group" "zabbix" {
   }
 }
 
-# Target Group - Grafana (Porta do Container: 3000)
 resource "aws_lb_target_group" "grafana" {
   name        = "${substr(var.project_name, 0, 20)}-tg-grafana"
   port        = 3000
@@ -59,10 +58,11 @@ resource "aws_lb_target_group" "grafana" {
   }
 }
 
-# Listener HTTP - Porta 80 Pública para o Zabbix
+#Listener (Ouvintes - apontados para o ALB (aws_alb.alb))
+#Ouvinte da porta 80 (Zabbix público)
 resource "aws_lb_listener" "zabbix_http" {
   load_balancer_arn = aws_lb.alb.arn
-  port              = 80
+  port              = 80 # Mantido: O mundo externo acessa o Zabbix sem precisar digitar porta na URL
   protocol          = "HTTP"
 
   default_action {
@@ -71,7 +71,7 @@ resource "aws_lb_listener" "zabbix_http" {
   }
 }
 
-# Listener HTTP - Porta 3000 Pública para o Grafana
+#Ouvinte da porta 3000 (Grafana público)
 resource "aws_lb_listener" "grafana_http" {
   load_balancer_arn = aws_lb.alb.arn
   port              = 3000
