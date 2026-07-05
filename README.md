@@ -1,4 +1,62 @@
-calabilidade de instâncias EC2 tradicionais.
+# 🚀 AWS ECS Zabbix Orchestration
+
+[![Terraform](https://img.shields.io/badge/Terraform-1.5+-blue.svg?logo=terraform)](https://www.terraform.io/)
+[![AWS](https://img.shields.io/badge/AWS-Cloud-orange.svg?logo=amazon-aws)](https://aws.amazon.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue.svg?logo=postgresql)](https://www.postgresql.org/)
+[![CloudWatch](https://img.shields.io/badge/CloudWatch-Monitoring-green.svg)](https://aws.amazon.com/cloudwatch/)
+
+Projeto de **Infrastructure as Code (IaC)** para provisionamento de infraestrutura AWS de alta disponibilidade, focada em observabilidade e resiliência, servindo como base para o ecossistema de monitoramento **Zabbix + Grafana** no **Amazon ECS**.
+
+---
+
+### 📌 Visão Geral
+Infraestrutura *production-like* de observabilidade na AWS utilizando **Terraform (IaC)** para provisionar um ambiente altamente escalável, tolerante a falhas e seguro contendo:
+
+* **Zabbix** (Monitoramento robusto e coleta de dados)
+* **Grafana** (Visualização rica e dashboards analíticos)
+* **AWS ECS Fargate** (*Serverless containers orchestration*)
+* **Amazon RDS PostgreSQL 15.7** (Persistência de dados gerenciada)
+* **AWS Secrets Manager** (Gestão e injeção segura de credenciais)
+
+O projeto simula com precisão uma arquitetura real de produção voltada para engenharia de observabilidade moderna baseada em containers.
+
+---
+
+### 🎯 Objetivo do Projeto
+Projetar e demonstrar uma infraestrutura cloud completa com foco em pilares de excelência técnica. Este projeto faz parte do meu portfólio profissional e demonstra a construção de uma infraestrutura AWS moderna. O foco é a evolução contínua, aplicando boas práticas de Engenharia de Confiabilidade (SRE) e automação em ambiente de produção:
+
+* **Infraestrutura como Código (IaC):** Automação total, reprodutibilidade e versionamento de ambiente.
+* **Segurança por padrão (DevSecOps):** Mitigação de vulnerabilidades e exposição zero de dados sensíveis.
+* **Arquitetura Multi-AZ:** Resiliência e alta disponibilidade distribuída em diferentes zonas.
+* **Escalabilidade Serverless:** Computação elástica com ECS Fargate sem gerenciar instâncias de servidores.
+* **Observabilidade Centralizada:** Coleta de logs agregados nativamente e foco em *Golden Signals*.
+
+---
+
+# 🏗️ Arquitetura do Sistema
+
+A infraestrutura foi desenhada para garantir isolamento e segurança, utilizando camadas públicas e privadas, protegidas por Load Balancers e monitoradas ativamente.
+
+```mermaid
+graph TD
+    User((Usuário)) --> ALB[Application Load Balancer]
+    subgraph "Public Subnet"
+        ALB
+    end
+    subgraph "Private Subnet"
+        ECS[ECS Fargate Cluster]
+        RDS[(Amazon RDS PostgreSQL)]
+    end
+    ALB --> ECS
+    ECS --> RDS
+    ECS --> CW[CloudWatch Alarms]
+    CW --> SNS[SNS Notification Service]
+    SNS --> Email[E-mail do Administrador]
+```
+
+### 🧠 Decisões Arquiteturais
+
+* **ECS Fargate:** Elimina a complexidade de gestão, patches e escalabilidade de instâncias EC2 tradicionais.
 * **RDS em Subnets Privadas:** Isolamento de rede absoluto da camada de banco de dados, sem qualquer exposição à internet pública.
 * **AWS PrivateLink (VPC Endpoints):** Comunicação do ECS para downloads de imagens de repositórios e envio de logs de forma 100% interna na rede AWS, dispensando custos com NAT Gateways.
 * **Secrets Manager via IAM Data Fetching:** Zero credenciais codificadas (*hardcoded*) no código, injetadas de forma efêmera na memória volátil dos containers.
