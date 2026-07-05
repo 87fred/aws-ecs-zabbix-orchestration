@@ -1,205 +1,126 @@
-# 🚀 AWS ECS Zabbix Orchestration
-
-Projeto de **Infrastructure as Code (IaC)** utilizando **Terraform** para provisionar uma infraestrutura segura, escalável e modular na AWS, servindo como base para uma futura implantação do **Zabbix** utilizando **Amazon ECS**.
-
-O projeto está sendo desenvolvido de forma incremental, documentando toda a evolução da arquitetura e aplicando boas práticas de **Cloud Computing**, **DevSecOps** e **Infrastructure as Code**.
-
----
-
-# 🎯 Objetivo
-
-Construir uma infraestrutura AWS utilizando Terraform seguindo boas práticas de:
-
-* Infrastructure as Code (IaC)
-* Cloud Architecture
-* DevSecOps
-* Segurança
-* Escalabilidade
-* Alta disponibilidade
-
-Toda a infraestrutura é provisionada através do Terraform, garantindo versionamento, reprodutibilidade e facilidade de manutenção.
+calabilidade de instâncias EC2 tradicionais.
+* **RDS em Subnets Privadas:** Isolamento de rede absoluto da camada de banco de dados, sem qualquer exposição à internet pública.
+* **AWS PrivateLink (VPC Endpoints):** Comunicação do ECS para downloads de imagens de repositórios e envio de logs de forma 100% interna na rede AWS, dispensando custos com NAT Gateways.
+* **Secrets Manager via IAM Data Fetching:** Zero credenciais codificadas (*hardcoded*) no código, injetadas de forma efêmera na memória volátil dos containers.
+* **ALB Inteligente:** Entrada pública única e centralizada chaveando tráfego por portas e regras dinâmicas de destino (*Target Groups*).
+* **IAM Least Privilege:** Aplicação rígida do princípio de menor privilégio para regras de execução das tarefas.
 
 ---
 
-# 📦 Recursos Implementados
+### 📦 Recursos Implementados & Provisionados
 
-## 🌐 Infraestrutura
-
-* Amazon VPC
-* Internet Gateway
-* Public Subnets
-* Private Subnets
-* Route Tables
-* Security Groups
-
----
-
-## 🗄 Banco de Dados
-
-* Amazon RDS PostgreSQL
-* DB Subnet Group
-* AWS Secrets Manager
+* **Infraestrutura Core:** 1x AWS VPC com DNS Hostnames ativado e 4x Subnets (2 públicas para o ALB e 2 privadas para computação/banco) distribuídas em Multi-AZ.
+* **Rede Interna:** 3x VPC Endpoints de Interface (ECR API, ECR DKR e Logs) para segurança interna via PrivateLink.
+* **Computação:** 1x Amazon ECS Cluster (Container Insights ativo) + 2x Task Definitions (Zabbix Server/Web em Pod multicontainer e Grafana autônomo) + 2x ECS Services.
+* **Tráfego:** 1x Application Load Balancer público munido de Listeners nas portas 80 e 3000 + 2x Target Groups do tipo `ip`.
+* **Database:** 1x Instância de Banco de Dados Amazon RDS PostgreSQL acoplada a um DB Subnet Group privado + integração com AWS Secrets Manager.
+* **Observabilidade:** CloudWatch Dashboards personalizados + Alertas automatizados via SNS.
+* **Governança:** Padronização completa de recursos através de `default_tags` para controle de custos e modularização.
 
 ---
 
-## ⚙️ Organização
+### 🔒 Segurança (DevSecOps)
 
-* Terraform Providers
-* Variáveis reutilizáveis
-* Ambientes utilizando `.tfvars`
-* Resource Tagging
+A arquitetura foi desenvolvida seguindo estritamente o princípio de **Least Privilege** (Menor Privilégio), implementando:
+
+* **Isolamento de Banco:** Banco de dados privado em sub-redes isoladas, totalmente inacessível externamente e sem associação de IP público.
+* **Injeção de Segredos:** Injeção dinâmica de segredos no boot da Task através do parâmetro `secrets` do ECS, sem dados expostos no código.
+* **Mínimo Acesso de Rede:** Comunicação restrita horizontalmente através de 4x Security Groups customizados atuando como firewalls estritos com regras isoladas (`aws_security_group_rule`).
+* **Segregação de Redes:** Segregação física e lógica de redes através de subnets públicas e privadas bem definidas.
 
 ---
 
-# 📂 Estrutura do Projeto
+### 👁️ Observabilidade & SRE
+
+Para garantir a saúde operacional, o projeto integra monitoramento de ponta a ponta focado nos **Golden Signals**:
+
+* **CloudWatch Dashboard:** Painel centralizado com indicadores de Saturação (CPU/Memória das tarefas ECS), Disponibilidade (Erros 5XX/Latência do ALB) e Persistência (Conexões ativas/CPU do banco RDS).
+* **Notificação Proativa:** Integração nativa com AWS SNS para envio imediato de alertas via e-mail em caso de violação de métricas críticas ou falhas de health check.
+
+---
+
+### 📁 Estrutura do Projeto
 
 ```text
 .
-├── providers.tf
-├── variables.tf
-├── network.tf
-├── security.tf
-├── rds.tf
-├── dev.tfvars
-└── README.md
-```
-
-| Arquivo        | Responsabilidade                                                            |
-| -------------- | --------------------------------------------------------------------------- |
-| `providers.tf` | Configuração dos providers e tags padrão                                    |
-| `variables.tf` | Declaração das variáveis do projeto                                         |
-| `network.tf`   | Provisionamento da infraestrutura de rede                                   |
-| `security.tf`  | Configuração dos Security Groups                                            |
-| `rds.tf`       | Provisionamento do Amazon RDS e leitura das credenciais via Secrets Manager |
-| `dev.tfvars`   | Valores das variáveis para o ambiente de desenvolvimento                    |
-
----
-
-# 🔒 Segurança
-
-A arquitetura foi desenvolvida seguindo o princípio de **Least Privilege**, implementando:
-
-* Banco de dados privado
-* Security Groups específicos para cada camada
-* Credenciais armazenadas no AWS Secrets Manager
-* Separação entre Subnets Públicas e Privadas
-* Resource Tagging para padronização dos recursos
-
----
-
-# ⚙️ Pré-requisitos
-
-Antes de executar o projeto, é necessário possuir:
-
-* Terraform >= 1.5
-* AWS CLI configurado
-* Conta AWS
-* Permissões para criação dos recursos
-
-Também é necessário criar previamente um Secret no AWS Secrets Manager com o nome:
-
-```text
-aws-ecs-zabbix-orchestration-rds-secret-v1
-```
-
-Formato esperado:
-
-```json
-{
-  "username": "admin",
-  "password": "password"
-}
+├── providers.tf      # Configuração dos providers e tags padrão de governança
+├── variables.tf      # Declaração e tipagem rigorosa das variáveis de entrada
+├── network.tf        # Construção da VPC, Subnets Públicas/Privadas e Tabelas de Roteamento
+├── endpoints.tf      # VPC Endpoints para PrivateLink do ECR e CloudWatch Logs (sem NAT Gateway)
+├── security.tf       # Definição fina de Security Groups e regras de Ingress/Egress (Least Privilege)
+├── rds.tf            # Provisionamento do PostgreSQL e integração com Secrets Manager
+├── ecs.tf            # Definição do Cluster ECS, Task Definitions, Services e logs agregados
+├── alb.tf            # Configuração do Application Load Balancer, Listeners e Target Groups
+├── monitoring.tf     # Configuração dos CloudWatch Dashboards e alarmes de métricas
+├── sns.tf            # Canais de notificação e tópicos para envio de alertas por e-mail
+├── outputs.tf        # Exposição estruturada das URLs públicas pós-deploy
+└── dev.tfvars        # Atribuição de valores específicos para o ambiente de Desenvolvimento
 ```
 
 ---
 
-# 🚀 Como executar
+### ⚙️ Pré-requisitos
 
-Inicializar o projeto:
+Antes de iniciar, certifique-se de possuir configurado:
+* **Terraform** v1.5 ou superior instalado.
+* **AWS CLI** devidamente configurado com as credenciais da sua conta.
+* **Secret previamente criado** no AWS Secrets Manager sob o nome exato: `aws-ecs-zabbix-orchestration-rds-secret-v1`
 
+---
+
+### 🚀 Como Executar
+
+**1. Inicializar o ambiente do Terraform**
 ```bash
 terraform init
 ```
 
-Validar a configuração:
+**2. Criar ou selecionar o Workspace dedicado**
+```bash
+terraform workspace select dev || terraform workspace new dev
+```
 
+**3. Validar estaticamente a sintaxe dos arquivos**
 ```bash
 terraform validate
 ```
 
-Formatar os arquivos:
-
-```bash
-terraform fmt
-```
-
-Gerar o plano de execução:
-
+**4. Visualizar o plano de execução e alterações planejadas**
 ```bash
 terraform plan -var-file="dev.tfvars"
 ```
 
-Provisionar a infraestrutura:
-
+**5. Executar o deploy automatizado na AWS**
 ```bash
 terraform apply -var-file="dev.tfvars"
 ```
 
-Remover a infraestrutura:
-
+**6. Destruir o ambiente (Limpeza pós-uso)**
 ```bash
 terraform destroy -var-file="dev.tfvars"
 ```
 
 ---
 
-# 📚 Boas Práticas Aplicadas
+### 🌐 Mapeamento de Outputs e URLs
 
-* Infrastructure as Code (IaC)
-* Cloud Native
-* DevSecOps
-* Least Privilege
-* Resource Tagging
-* Organização por responsabilidade
-* Reutilização de variáveis
-* Ambientes separados por `.tfvars`
-* Gerenciamento seguro de credenciais
+Ao término do `terraform apply`, o console exibirá de forma estruturada as seguintes rotas públicas para acesso imediato no navegador:
+
+* **Zabbix Web interface:** `http://<alb-dns-name>` (Porta padrão 80 HTTP)
+* **Grafana Dashboards:** `http://<alb-dns-name>:3000` (Porta 3000 HTTP)
 
 ---
 
-# 🚀 Próximas Evoluções
+### 🔥 Destaques Técnicos
 
-O projeto continuará evoluindo com a implementação dos seguintes serviços:
-
-## Containers
-
-* Amazon Elastic Container Registry (ECR)
-* Amazon ECS Cluster
-* Amazon ECS Task Definition
-* Amazon ECS Service
-
-## Balanceamento de Carga
-
-* Application Load Balancer (ALB)
-
-## Observabilidade
-
-* Amazon CloudWatch
+* **Arquitetura Resiliente Multi-AZ:** Tolerância automática a falhas a nível de datacenter AWS.
+* **Mapeamento de Tráfego Interno Avançado:** O ALB recebe requisições na porta 80 e as encaminha de forma transparente para as Tasks na porta 8080 nativa do container Zabbix Web Nginx.
+* **Estratégias de Custos Inteligentes:** Uso flexível de Fargate Spot para computação otimizada em ambientes de não-produção.
+* **Infraestrutura 100% Reprodutível:** Todo o ecossistema pode ser recriado do zero em minutos com apenas um comando.
 
 ---
 
-# 🎯 Objetivo do Projeto
+### 👨‍💻 Autor
 
-Este projeto faz parte do meu portfólio profissional e tem como objetivo demonstrar a construção de uma infraestrutura AWS moderna utilizando Terraform.
-
-A proposta é evoluir continuamente a arquitetura, incorporando novos serviços e boas práticas utilizadas em ambientes de produção, documentando cada etapa da implementação.
-
----
-
-# 👨‍💻 Autor
-
-**Frederico Almeida**
-
-Cloud Engineer | DevOps | AWS | Terraform | Linux
-
-Projeto desenvolvido para fins de estudo, evolução técnica e composição de portfólio profissional.
+**Frederico Almeida**  
+*Cloud & DevOps Engineer | AWS | Terraform | Linux*
