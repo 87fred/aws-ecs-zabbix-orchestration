@@ -162,7 +162,7 @@ terraform workspace select dev || terraform workspace new dev
 
 **3. Validar estaticamente a sintaxe dos arquivos**
 ```bash
-terraform validate
+terraform validatee
 ```
 
 **4. Visualizar o plano de execução e alterações planejadas**
