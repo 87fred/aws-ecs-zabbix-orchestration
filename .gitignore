@@ -4,4 +4,6 @@
 crash.log
 *.tfvars
 # Ignorar o plano binário gerado pelo script de deploy
-tfplan
+tfplan.terraform.lock.hcl
+**/.terraform.lock.hcl
+
