@@ -83,7 +83,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
   threshold           = "80"
   alarm_description   = "Alerta: CPU do ${each.value} acima de 80%"
   alarm_actions       = [aws_sns_topic.alerts.arn]
-  
+
   dimensions = {
     ClusterName = "${var.project_name}-ecs-cluster-zabbix"
     ServiceName = "${var.project_name}-${each.value}-service"
