@@ -1,13 +1,11 @@
 #Serviço de Notificação - AWS SNS
-
-#1. Cria o Canal de Notificação (SNS Topic) para envio de alertas via e-mail
-resource "aws_sns_topic" "sns_alerts" {
-  name = "${var.project_name}-sns-alerts"
+# sns.tf
+resource "aws_sns_topic" "alerts" { # Mudei o nome aqui de sns_alerts para alerts
+  name = "${var.project_name}-alerts-topic"
 }
 
-#2. Inscreve o seu e-mail no canal de notificação (SNS Topic) para receber alertas
-resource "aws_sns_topic_subscription" "sns_email_subscription" {
-  topic_arn = aws_sns_topic.sns_alerts.arn
+resource "aws_sns_topic_subscription" "email_alerts" {
+  topic_arn = aws_sns_topic.alerts.arn 
   protocol  = "email"
-  endpoint  = "email@email.com" # Substitua pelo seu e-mail
+  endpoint  = "email@email.com"
 }
