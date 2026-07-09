@@ -6,7 +6,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
       {
         type = "metric", x = 0, y = 0, width = 12, height = 5
         properties = {
-          title = "ECS: Consumo de CPU e Memória - Zabbix"
+          title  = "ECS: Consumo de CPU e Memória - Zabbix"
           period = 300, stat = "Average", region = var.aws_region
           metrics = [
             ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.project_name}-zabbix-service", "ClusterName", "${var.project_name}-ecs-cluster-zabbix", { "label" = "CPU (%)", "color" = "#1f77b4" }],
@@ -17,7 +17,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
       {
         type = "metric", x = 12, y = 0, width = 12, height = 5
         properties = {
-          title = "ECS: Consumo de CPU e Memória - Grafana"
+          title  = "ECS: Consumo de CPU e Memória - Grafana"
           period = 300, stat = "Average", region = var.aws_region
           metrics = [
             ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.project_name}-grafana-service", "ClusterName", "${var.project_name}-ecs-cluster-zabbix", { "label" = "CPU (%)", "color" = "#ff7f0e" }],
@@ -28,7 +28,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
       {
         type = "metric", x = 0, y = 5, width = 12, height = 5
         properties = {
-          title = "ALB: Tráfego e Erros HTTP"
+          title  = "ALB: Tráfego e Erros HTTP"
           period = 60, stat = "Sum", region = var.aws_region
           metrics = [
             ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", aws_lb.alb.arn_suffix, { "label" = "Requisições (Total)", "color" = "#2ca02c" }],
@@ -39,10 +39,10 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
       {
         type = "metric", x = 12, y = 5, width = 12, height = 5
         properties = {
-          title = "ALB: Latência de Resposta"
+          title  = "ALB: Latência de Resposta"
           period = 300, stat = "Average", region = var.aws_region
           # Esta configuração força o gráfico a mostrar 0 se não houver dados, removendo o erro
-          treatMissingData = "notBreaching" 
+          treatMissingData = "notBreaching"
           metrics = [
             ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.alb.arn_suffix, { "label" = "Latência Média (s)", "color" = "#9467bd" }]
           ]
@@ -51,12 +51,12 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
       {
         type = "metric", x = 0, y = 10, width = 24, height = 5
         properties = {
-          title = "RDS: Saúde do Banco de Dados"
+          title  = "RDS: Saúde do Banco de Dados"
           period = 300, stat = "Average", region = var.aws_region
-          
+
           # Isso cria os nomes das réguas verticais esquerda e direita
           yAxis = {
-            left = { label = "Porcentagem (%)", min = 0, max = 100 },
+            left  = { label = "Porcentagem (%)", min = 0, max = 100 },
             right = { label = "Quantidade (Conexões)", min = 0 }
           }
 
