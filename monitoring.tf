@@ -69,3 +69,59 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
     ]
   })
 }
+#Alarmes
+# 1. Alerta de CPU Alta no ECS (Zabbix ou Grafana)
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
+  for_each            = toset(["zabbix", "grafana"])
+  alarm_name          = "${var.project_name}-ecs-${each.value}-cpu-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "Alerta: CPU do ${each.value} acima de 80%"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  
+  dimensions = {
+    ClusterName = "${var.project_name}-ecs-cluster-zabbix"
+    ServiceName = "${var.project_name}-${each.value}-service"
+  }
+}
+
+# 2. Alerta de Erros 5XX no ALB (Indica falha crítica na aplicação)
+resource "aws_cloudwatch_metric_alarm" "alb_5xx_errors" {
+  alarm_name          = "${var.project_name}-alb-5xx-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "HTTPCode_Target_5XX_Count"
+  namespace           = "AWS/ApplicationELB"
+  period              = "60"
+  statistic           = "Sum"
+  threshold           = "5" # Mais de 5 erros em 1 minuto
+  alarm_description   = "Alerta: Muitas falhas 5XX no ALB"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    LoadBalancer = aws_lb.alb.arn_suffix
+  }
+}
+
+# 3. Alerta de Saúde do Banco de Dados (Conexões saturadas)
+resource "aws_cloudwatch_metric_alarm" "rds_conn_high" {
+  alarm_name          = "${var.project_name}-rds-connections-high"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "DatabaseConnections"
+  namespace           = "AWS/RDS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80" # Ajuste conforme o limite do seu RDS t3.micro
+  alarm_description   = "Alerta: Conexões no RDS acima de 80"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    DBInstanceIdentifier = "${var.project_name}-rds-instance"
+  }
+}
